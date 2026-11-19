@@ -6,7 +6,7 @@ import {inflateSync} from 'node:zlib';
 import {writeFile} from 'node:fs/promises';
 
 test('Avery 5360 fits 21 complete codes and identifiers per sheet without spilling across labels',async({},info)=>{
- const origin='https://benjamin41997-ctrl.github.io/spray-net-review-portal/';
+ const origin='https://spray-net-charlotte.github.io/spray-net-review-portal/';
  const codes=Array.from({length:22},(_,i)=>({token:(String(i).padStart(2,'0')+'a'.repeat(30)),label:`SN-${341+i}`}));
  const bytes=await stickerPDF(codes,{...avery5360Layout,origin,test:true});
  await writeFile(info.outputPath('avery-5360-sheet.pdf'),bytes);
