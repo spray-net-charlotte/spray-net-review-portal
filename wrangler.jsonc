@@ -8,8 +8,8 @@
  "compatibility_flags":["nodejs_compat"],
  "vars":{
   "ENVIRONMENT":"production",
-  "PUBLIC_PORTAL_URL":"https://benjamin41997-ctrl.github.io/spray-net-review-portal/",
-  "ALLOWED_ORIGINS":"https://benjamin41997-ctrl.github.io",
+  "PUBLIC_PORTAL_URL":"https://spray-net-charlotte.github.io/spray-net-review-portal/",
+  "ALLOWED_ORIGINS":"https://spray-net-charlotte.github.io,https://benjamin41997-ctrl.github.io",
   "ENABLE_AI_CLEANUP":"true",
   "TRANSCRIPTION_MODEL":"gpt-transcribe",
   "REVIEW_EDITOR_MODEL":"gpt-6-luna"
