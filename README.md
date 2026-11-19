@@ -7,13 +7,13 @@ The customer portal and admin interface now build as a static **GitHub Pages** w
 The permanent portal address is:
 
 ```text
-https://benjamin41997-ctrl.github.io/spray-net-review-portal/
+https://spray-net-charlotte.github.io/spray-net-review-portal/
 ```
 
 Every preprinted sticker contains that same page path plus its own random token:
 
 ```text
-https://benjamin41997-ctrl.github.io/spray-net-review-portal/?code=RANDOM_TOKEN
+https://spray-net-charlotte.github.io/spray-net-review-portal/?code=RANDOM_TOKEN
 ```
 
 The static application asks the secure backend which job belongs to that token and displays the matching photos/review options. You can generate 100 stickers, grab any unused one, assign it later, and keep updating the original job. Assignment is permanent; deleted jobs retire their codes. Tokens have 192 bits of randomness. This uses one reusable page and needs no GitHub redirects or rewrite rules.
@@ -89,9 +89,9 @@ The configuration script rejects credentials in URLs and private Supabase keys. 
 
 1. Create the intended GitHub repository and push the reviewed source. Select **GitHub Actions** as its Pages publishing source. Confirm the permanent URL before live printing.
 2. The approved Cloudflare account now has the D1 database configured in `wrangler.jsonc` and `wrangler.preview.jsonc`, initialized with the reviewed schema and a sample-only online preview project. The private Standard R2 bucket `spray-net-review-photos` is now provisioned and bound as `BUCKET` to the live API after the account owner activated R2. `wrangler.local.jsonc` uses only local preview storage. `wrangler.jsonc` matches the existing live Luna/transcription settings; `wrangler.preview.jsonc` retains the same storage binding so later deployments do not remove photo access.
-3. Configure Worker secrets: `ADMIN_EMAILS` with the three approved addresses, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and optionally `OPENAI_API_KEY`. Keep `ENVIRONMENT=production` and `ENABLE_AI_CLEANUP=false`. Set `PUBLIC_PORTAL_URL` to the full GitHub URL and `ALLOWED_ORIGINS` to its origin, e.g. `https://benjamin41997-ctrl.github.io`. Do not upload `LOCAL_ADMIN_TOKEN`.
+3. Configure Worker secrets: `ADMIN_EMAILS` with the three approved addresses, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and optionally `OPENAI_API_KEY`. Keep `ENVIRONMENT=production` and `ENABLE_AI_CLEANUP=false`. Set `PUBLIC_PORTAL_URL` to the full GitHub URL and `ALLOWED_ORIGINS` to its origin, e.g. `https://spray-net-charlotte.github.io`. Do not upload `LOCAL_ADMIN_TOKEN`.
 4. The initial schema has already been applied once to the configured cloud database; do not reapply it. Deploy the fully configured Worker when adding admin/photo operation. Local customer records and sticker assignments are not copied to production. Start production sticker batches in that production database. Keep any demo-token secret separate from customer assignments.
-5. In Supabase, prepare existing confirmed admin accounts for the three approved emails and allow the exact callback URL `https://benjamin41997-ctrl.github.io/spray-net-review-portal/?admin=1`. The UI uses `shouldCreateUser:false`, so login does not create accounts. Check [passwordless setup](https://supabase.com/docs/guides/auth/auth-email-passwordless) and [email delivery requirements](https://supabase.com/docs/guides/auth/auth-smtp); configure reliable delivery for all approved recipients before launch. Do not change another application's Site URL or email template without reviewing its impact.
+5. In Supabase, prepare existing confirmed admin accounts for the three approved emails and allow the exact callback URL `https://spray-net-charlotte.github.io/spray-net-review-portal/?admin=1`. The UI uses `shouldCreateUser:false`, so login does not create accounts. Check [passwordless setup](https://supabase.com/docs/guides/auth/auth-email-passwordless) and [email delivery requirements](https://supabase.com/docs/guides/auth/auth-smtp); configure reliable delivery for all approved recipients before launch. Do not change another application's Site URL or email template without reviewing its impact.
 6. Set GitHub repository variables `REVIEW_API_BASE_URL`, `REVIEW_SUPABASE_URL`, and `REVIEW_SUPABASE_PUBLISHABLE_KEY`. These values are public. The Pages workflow computes the portal URL/repository base path and requires complete connection settings when a backend URL is supplied or connected mode is requested.
 7. Run **Publish review portal to GitHub Pages**, or push the next interface update. Only `dist/site` is uploaded; the Worker, database files, credentials, customer records, and local test sheets are excluded.
 8. Test the actual hosted email sign-in, job creation/assignment, photo saving, native platform links, and optional transcription. Print and scan one live sticker at 100% scale on the intended stock before distributing a batch.

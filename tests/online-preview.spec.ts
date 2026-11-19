@@ -34,7 +34,7 @@ test('unconnected Pages preview supports drafts and real photo downloads without
 test('connecting the preview preserves its draft and Next uses the real editor path',async({page})=>{
  const token='B'.repeat(32),original='cabinets look great guys friendly but arrived late',edited='The cabinets look great after our project with Spray-Net South Charlotte. The crew was friendly, but arrived late.';
  await page.goto(site);await page.getByRole('button',{name:'Type my review',exact:true}).click();await page.getByLabel('Your review',{exact:true}).fill(original);
- await page.route('**/portal-config.json',route=>route.fulfill({json:{apiBaseURL:'https://api.example.test',portalURL:'https://benjamin41997-ctrl.github.io/spray-net-review-portal/',supabaseURL:'',supabasePublishableKey:'',localPreview:false}}));
+ await page.route('**/portal-config.json',route=>route.fulfill({json:{apiBaseURL:'https://api.example.test',portalURL:'https://spray-net-charlotte.github.io/spray-net-review-portal/',supabaseURL:'',supabasePublishableKey:'',localPreview:false}}));
  const headers={'Access-Control-Allow-Origin':'http://127.0.0.1:4173'};
  await page.route('https://api.example.test/api/preview',route=>route.fulfill({headers,json:{token,settings:{transcription:true,cleanup:true}}}));
  let calls=0;await page.route('https://api.example.test/api/customer/'+token+'/cleanup',route=>{calls++;expect(route.request().postDataJSON()).toEqual({text:original});return route.fulfill({headers,json:{text:edited}});});

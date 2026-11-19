@@ -2,7 +2,7 @@ import {test,expect} from './test';
 import {handle} from '../backend/api';
 import type {Env} from '../backend/types';
 
-const origin='https://benjamin41997-ctrl.github.io';
+const origin='https://spray-net-charlotte.github.io';
 const token='D'.repeat(32);
 function environment(){
  const counts=new Map<string,number>();

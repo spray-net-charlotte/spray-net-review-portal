@@ -4,7 +4,7 @@ import {login,apiBase,site,startDraft,approveReview} from './helpers';
 const staticSite='http://127.0.0.1:4173/spray-net-review-portal/';
 test('production static bundle resolves customer query links and keeps mock admin disabled',async({page,request})=>{
  const {admin}=await login();const sample=await(await admin.post('/api/admin/seed',{data:{}})).json();await admin.dispose();
- await page.route('**/portal-config.json',r=>r.fulfill({json:{apiBaseURL:'https://api.example.test',portalURL:'https://benjamin41997-ctrl.github.io/spray-net-review-portal/',supabaseURL:'',supabasePublishableKey:'',localPreview:true}}));
+ await page.route('**/portal-config.json',r=>r.fulfill({json:{apiBaseURL:'https://api.example.test',portalURL:'https://spray-net-charlotte.github.io/spray-net-review-portal/',supabaseURL:'',supabasePublishableKey:'',localPreview:true}}));
  await page.route('https://api.example.test/**',async route=>{const original=new URL(route.request().url());const response=await route.fetch({url:apiBase+original.pathname+original.search});await route.fulfill({response,headers:{...response.headers(),'access-control-allow-origin':'http://127.0.0.1:4173'}});});
  // This test proxies API requests with route.fetch, which bypasses context mocks.
  await page.route('https://api.example.test/api/customer/*/cleanup',route=>route.fulfill({headers:{'access-control-allow-origin':'http://127.0.0.1:4173'},json:{text:route.request().postDataJSON().text}}));

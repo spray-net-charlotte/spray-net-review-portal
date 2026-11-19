@@ -1,7 +1,7 @@
 import {test,expect} from './test';
 import {handle} from '../backend/api';
 import type {Env} from '../backend/types';
-const token='B'.repeat(32),portal='https://benjamin41997-ctrl.github.io';
+const token='B'.repeat(32),portal='https://spray-net-charlotte.github.io';
 function environment(demo=1,status='active',quotaReached=false):Env{
  const db={prepare(sql:string){const statement={bind(..._values:unknown[]){return statement;},async first(){if(sql.startsWith('SELECT * FROM qr_codes'))return {job_id:'preview-job'};if(sql.startsWith('SELECT * FROM jobs'))return {id:'preview-job',internal_name:'PRIVATE job name',title:'PRIVATE greeting',source:'training',demo,status,links:'{}'};if(sql.startsWith('INSERT INTO limits'))return quotaReached?null:{count:1};return null;},async all(){return {results:[]};}};return statement;}};
  return {DB:db as unknown as D1Database,ENVIRONMENT:'production',ALLOWED_ORIGINS:portal,PREVIEW_QR_TOKEN:token,OPENAI_API_KEY:'fake-test-key',ENABLE_AI_CLEANUP:'true',REVIEW_EDITOR_MODEL:'gpt-6-luna'};
