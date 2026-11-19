@@ -4,13 +4,15 @@ import {Dialog,DialogClose,DialogContent,DialogDescription,DialogHeader,DialogTi
 import {saveFile} from '@/lib/client';
 import {portalLink} from '@/lib/urls';
 import type {SheetOptions} from '@/lib/sticker-pdf';
+import {stickerPresets} from '@/lib/sticker-layouts';
+export {defaultStickerLayout} from '@/lib/sticker-layouts';
 
 type Code={token:string;label:string};
-export const defaultStickerLayout:Omit<SheetOptions,'origin'|'test'>={width:66.675,height:25.4,marginX:4.7625,marginY:12.7,gapX:3.175,gapY:0,paper:'letter'};
 
-export default function QRPreview({codes,options,label,title,description,buttonClass='secondary',disabled=false}:{codes:Code[];options:SheetOptions;label:string;title:string;description:string;buttonClass?:string;disabled?:boolean}){
+export default function QRPreview({codes,options,label,title,description,buttonClass='secondary',disabled=false,choosePrintLayout=false}:{codes:Code[];options:SheetOptions;label:string;title:string;description:string;buttonClass?:string;disabled?:boolean;choosePrintLayout?:boolean}){
  const [open,setOpen]=useState(false);
  const [selected,setSelected]=useState('');
+ const [layout,setLayout]=useState<keyof typeof stickerPresets>('standard');
  const [image,setImage]=useState<{link:string;src:string}|null>(null);
  const [error,setError]=useState('');const [printing,setPrinting]=useState(false);
  const code=codes.find(q=>q.token===selected)||codes[0];
@@ -29,7 +31,7 @@ export default function QRPreview({codes,options,label,title,description,buttonC
   setError('');setPrinting(true);
   try{
    const {stickerPDF}=await import('@/lib/sticker-pdf');
-   const result=await stickerPDF([code],options);
+   const result=await stickerPDF([code],choosePrintLayout?{...options,...stickerPresets[layout].layout}:options);
    saveFile(new Blob([result as BlobPart],{type:'application/pdf'}),`spray-net-${options.test?'TEST-':''}${code.label.replace(/[^A-Za-z0-9-]+/g,'-')}.pdf`);
   }catch(e){setError((e as Error).message);}finally{setPrinting(false);}
  }
@@ -40,6 +42,7 @@ export default function QRPreview({codes,options,label,title,description,buttonC
    {codes.length>1&&<label>Choose a QR code<select value={code?.token||''} onChange={e=>{setSelected(e.target.value);setError('');}}>{codes.map(q=><option key={q.token} value={q.token}>{q.label}</option>)}</select></label>}
    {image?.link===link?<img className="qr-scan-image" src={image.src} alt={`Scannable QR code for ${stickerLabel}`}/>:!error&&<p role="status">Preparing QR code…</p>}
    <strong className="qr-preview-label">{stickerLabel}</strong>
+   {choosePrintLayout&&<label>Print label layout<select aria-label="Print label layout" value={layout} onChange={e=>setLayout(e.target.value as keyof typeof stickerPresets)}>{Object.entries(stickerPresets).map(([id,preset])=><option value={id} key={id}>{preset.name}</option>)}</select></label>}
    {error&&<p role="alert" className="notice error">{error}</p>}
    <button className="secondary" disabled={printing||!code} onClick={printOne}><Printer/>{printing?'Preparing PDF…':'Download single-sticker PDF'}</button>
    <small>Print the PDF at 100% / Actual size.</small>

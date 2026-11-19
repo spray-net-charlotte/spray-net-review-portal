@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
 import {PDFDocument,StandardFonts,rgb} from 'pdf-lib';
-export type SheetOptions={origin:string;width:number;height:number;marginX:number;marginY:number;gapX:number;gapY:number;paper:'letter'|'a4';test:boolean};
+export type SheetOptions={origin:string;width:number;height:number;marginX:number;marginY:number;gapX:number;gapY:number;paper:'letter'|'a4';test:boolean;identifierBeside?:boolean};
 export async function stickerPDF(codes:{token:string;label:string}[],o:SheetOptions){
  if(!codes.length)throw Error('Choose at least one code.');
  const origin=new URL(o.origin);if(origin.search||origin.hash||origin.username||origin.password||(!o.test&&origin.protocol!=='https:')||!['http:','https:'].includes(origin.protocol))throw Error('Use the complete portal HTTPS URL, including its repository path, without a query or fragment.');
@@ -12,10 +12,19 @@ export async function stickerPDF(codes:{token:string;label:string}[],o:SheetOpti
  for(let i=0;i<codes.length;i++){const pos=i%(cols*rows);if(pos===0)page=pdf.addPage([pageW,pageH]);const x=mx+(pos%cols)*(w+gx),y=pageH-my-(Math.floor(pos/cols)+1)*h-Math.floor(pos/cols)*gy;
   if(!/^[A-Za-z0-9_-]{32}$/.test(codes[i].token))throw Error('Invalid sticker token.');
   const link=new URL(origin.href);link.searchParams.set('code',codes[i].token);
-  const qr=QRCode.create(link.href,{errorCorrectionLevel:'M'});const size=Math.min(w-12,h-20,82);const module=size/(qr.modules.size+8);if(module/mm<.30)throw Error('The QR is too dense for this label/URL. Use larger labels.');const qx=x+(w-size)/2,qy=y+16;
+  const beside=o.identifierBeside===true;
+  const qr=QRCode.create(link.href,{errorCorrectionLevel:'M'});const size=beside?Math.min(w*.51,h-12,96):Math.min(w-12,h-20,82);const module=size/(qr.modules.size+8);if(module/mm<.30)throw Error('The QR is too dense for this label/URL. Use larger labels.');const qx=beside?x+12:x+(w-size)/2,qy=beside?y+(h-size)/2:y+16;
   page.drawRectangle({x:qx,y:qy,width:size,height:size,color:rgb(1,1,1)});
   for(let row=0;row<qr.modules.size;row++)for(let col=0;col<qr.modules.size;col++)if(qr.modules.get(row,col))page.drawRectangle({x:qx+(col+4)*module,y:qy+size-(row+5)*module,width:module+.005,height:module+.005,color:rgb(0,0,0)});
-  const label=`${o.test?'TEST · ':''}${codes[i].label}`;const fs=9;page.drawText(label,{x:x+(w-font.widthOfTextAtSize(label,fs))/2,y:y+5,size:fs,font,color:navy});
+  if(beside){
+   const tx=qx+size+6,available=x+w-6-tx;
+   const fs=Math.min(17,available/font.widthOfTextAtSize(codes[i].label,1));
+   if(fs<8)throw Error('The printed identifier is too long for this label.');
+   page.drawText(codes[i].label,{x:tx,y:y+h/2-5,size:fs,font,color:navy});
+   if(o.test)page.drawText('TEST',{x:tx,y:y+h/2+15,size:9,font,color:navy});
+  }else{
+   const label=`${o.test?'TEST · ':''}${codes[i].label}`;const fs=9;page.drawText(label,{x:x+(w-font.widthOfTextAtSize(label,fs))/2,y:y+5,size:fs,font,color:navy});
+  }
  }
  return pdf.save();
 }

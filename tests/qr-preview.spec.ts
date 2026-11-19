@@ -48,6 +48,25 @@ test('batch preview selects and downloads exactly one sticker on the configured 
  const pdf=await PDFDocument.load(await readFile(path));expect(pdf.getPageCount()).toBe(1);const {width,height}=pdf.getPage(0).getSize();expect(width).toBeCloseTo(612);expect(height).toBeCloseTo(792);
 });
 
+test('Avery 5360 preset applies to batch and single-sticker printing',async({page},testInfo)=>{
+ await mockAdmin(page);
+ await page.getByRole('tab',{name:'QR stickers'}).click();
+ await page.getByLabel('Label layout',{exact:true}).selectOption('avery5360');
+ await expect(page.getByLabel('Label width (mm)',{exact:true})).toHaveValue('71.4375');
+ await expect(page.getByLabel('Label height (mm)',{exact:true})).toHaveValue('38.1');
+ await expect(page.getByText('Each label has a complete QR with its SN-number beside it.',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'Preview QR codes',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'QR sticker preview'});
+ const downloading=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download single-sticker PDF'}).click();
+ await(await downloading).saveAs(testInfo.outputPath('avery-5360-single.pdf'));
+ await dialog.getByRole('button',{name:'Done'}).click();
+ await page.getByRole('tab',{name:'Projects',exact:true}).click();
+ await page.locator('.project-row').filter({has:page.getByRole('heading',{name:assigned.id,exact:true})}).getByRole('button',{name:'Open project'}).click();
+ await page.getByRole('button',{name:'Show customer QR code'}).click();
+ await page.getByLabel('Print label layout',{exact:true}).selectOption('avery5360');
+ expect(await decode(page.getByRole('dialog').getByRole('img'))).toBe(site+'?code='+first.token);
+});
+
 async function mockAdmin(page:import('@playwright/test').Page){
  await browserAdmin(page,'qa-local-admin');
  await page.route('**/api/admin/session',r=>r.fulfill({json:{allowed:true}}));
