@@ -36,7 +36,7 @@ export async function handle(r:Request,env:Env){const {db,bucket,requireAdmin,sa
     let storageCleanupPending=false;try{for(const photo of keys)await bucket().delete(photo.object_key);}catch{storageCleanupPending=true;}return json({deleted:true,storageCleanupPending});}
   }
   if(p[1]==='batch'&&method==='POST'){const b=await body(r);const count=b.count??100;if(!Number.isInteger(count)||count<1||count>100)throw new HttpError(400,'Choose 1–100 codes.');
-   const counter=await db().prepare("INSERT INTO counters(name,value) VALUES('qr',?) ON CONFLICT(name) DO UPDATE SET value=value+excluded.value RETURNING value").bind(count).first<{value:number}>();const batch=crypto.randomUUID();
+   const counter=await db().prepare("INSERT INTO counters(name,value) VALUES('qr',4388+?) ON CONFLICT(name) DO UPDATE SET value=MAX(value,4388)+? RETURNING value").bind(count,count).first<{value:number}>();const batch=crypto.randomUUID();
    await db().batch(Array.from({length:count},(_,i)=>db().prepare('INSERT INTO qr_codes(token,label,batch_id,created_at) VALUES(?,?,?,?)').bind(token(),`SN-${String(counter!.value-count+i+1).padStart(3,'0')}`,batch,now)));
    return json({batch_id:batch},201);}
   if(p[1]==='assign'&&method==='POST'){const b=await body(r);await getJob(clean(b.job_id));const q=await db().prepare('UPDATE qr_codes SET job_id=?,assigned_at=? WHERE token=? AND assigned_at IS NULL AND job_id IS NULL RETURNING *').bind(b.job_id,now,clean(b.token)).first();if(!q)throw new HttpError(409,'This code is already assigned or unavailable. Use an unused sticker.');return json(q);}

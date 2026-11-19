@@ -10,6 +10,8 @@ The permanent portal address is:
 https://spray-net-charlotte.github.io/spray-net-review-portal/
 ```
 
+New sticker batches begin at **SN-4389**, then continue sequentially. Existing labels, tokens and assignments remain unchanged. If the saved counter is already higher, numbering continues above it without reuse.
+
 Every preprinted sticker contains that same page path plus its own random token:
 
 ```text
