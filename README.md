@@ -12,6 +12,8 @@ https://spray-net-charlotte.github.io/spray-net-review-portal/
 
 New sticker batches begin at **SN-4389**, then continue sequentially. Existing labels, tokens and assignments remain unchanged. If the saved counter is already higher, numbering continues above it without reuse.
 
+The sticker inventory shows the newest batches first. Printing displays the selected SN-number range, batch choices are named by their number ranges, and generating a batch automatically selects **Latest batch**. Older unused stickers remain available by selecting their batch.
+
 Every preprinted sticker contains that same page path plus its own random token:
 
 ```text

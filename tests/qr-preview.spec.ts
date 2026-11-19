@@ -67,6 +67,30 @@ test('Avery 5360 preset applies to batch and single-sticker printing',async({pag
  expect(await decode(page.getByRole('dialog').getByRole('img'))).toBe(site+'?code='+first.token);
 });
 
+test('newest stickers appear first and generating a batch selects its printed number range',async({page})=>{
+ await mockAdmin(page);
+ let codes=[{...second,batch_id:'old',label:'SN-001',created_at:'2026-11-14T00:00:00Z'},
+  {...third,batch_id:'new',token:token('F'),label:'SN-4389',created_at:'2026-11-19T00:00:00Z'},
+  {...third,batch_id:'new',token:token('G'),label:'SN-4390',created_at:'2026-11-19T00:00:00Z'}];
+ await page.route('**/api/admin/dashboard',r=>r.fulfill({json:{jobs:[],qrs:codes,settings:{origin:site,local:true}}}));
+ await page.route('**/api/admin/batch',r=>{
+  codes=[...codes,{...third,batch_id:'newest',token:token('H'),label:'SN-4489',created_at:'2026-11-19T01:00:00Z'},
+   {...third,batch_id:'newest',token:token('I'),label:'SN-4490',created_at:'2026-11-19T01:00:00Z'}];
+  return r.fulfill({json:{batch_id:'newest'}});
+ });
+ await page.reload();await page.getByRole('tab',{name:'QR stickers'}).click();
+ await expect(page.getByText('Selected for printing: SN-4389 – SN-4390 (2 stickers)',{exact:true})).toBeVisible();
+ await expect(page.locator('.qr-item').first()).toContainText('SN-4389');
+ await page.getByRole('combobox',{name:'Codes to print'}).click();
+ await page.getByRole('option',{name:'SN-001 – SN-001',exact:true}).click();
+ await expect(page.getByText('Selected for printing: SN-001 – SN-001 (1 sticker)',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Generate 100 codes'}).click();
+ await expect(page.getByText('Selected for printing: SN-4489 – SN-4490 (2 stickers)',{exact:true})).toBeVisible();
+ await expect(page.locator('.qr-item').first()).toContainText('SN-4489');
+ await page.getByRole('button',{name:'Preview QR codes',exact:true}).click();
+ expect(await decode(page.getByRole('dialog').getByRole('img'))).toBe(site+'?code='+token('H'));
+});
+
 async function mockAdmin(page:import('@playwright/test').Page){
  await browserAdmin(page,'qa-local-admin');
  await page.route('**/api/admin/session',r=>r.fulfill({json:{allowed:true}}));
