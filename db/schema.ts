@@ -16,6 +16,7 @@ export const customerLinks = sqliteTable('customer_links', {
   token: text('token').notNull().unique(), createdAt: text('created_at').notNull(),
 });
 export const photos = sqliteTable('photos', {
+  pairId: text('pair_id'),
   id: text('id').primaryKey(), jobId: text('job_id').notNull().references(() => jobs.id, { onDelete: 'cascade' }),
   objectKey: text('object_key').notNull(), label: text('label').notNull(),
   kind: text('kind').notNull(), position: integer('position').notNull(), mime: text('mime').notNull(),

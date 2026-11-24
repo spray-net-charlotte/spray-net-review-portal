@@ -20,7 +20,7 @@ function token(){const a=new Uint8Array(24);crypto.getRandomValues(a);return bto
 async function getJob(id:string,ensureLink=false):Promise<Job>{const j=await db().prepare('SELECT * FROM jobs WHERE id=?').bind(id).first<any>();if(!j)throw new HttpError(404,'This project could not be found.');
  if(ensureLink)await db().prepare('INSERT INTO customer_links(job_id,token,created_at) VALUES(?,?,?) ON CONFLICT(job_id) DO NOTHING').bind(id,token(),new Date().toISOString()).run();
  const direct=await db().prepare('SELECT token FROM customer_links WHERE job_id=?').bind(id).first<{token:string}>();if(direct)j.customer_token=direct.token;
- j.links=JSON.parse(j.links);j.photos=(await db().prepare('SELECT id,job_id,label,kind,position,mime FROM photos WHERE job_id=? ORDER BY position,id').bind(id).all()).results;
+ j.links=JSON.parse(j.links);j.photos=(await db().prepare('SELECT id,job_id,label,kind,position,mime,pair_id FROM photos WHERE job_id=? ORDER BY position,id').bind(id).all()).results;
  j.qrs=(await db().prepare('SELECT * FROM qr_codes WHERE job_id=? ORDER BY label').bind(id).all()).results;return j;}
 async function resolveQR(t:string,preview=false){if(!/^[A-Za-z0-9_-]{32}$/.test(t))throw new HttpError(404,'This page is unavailable.');const q=await db().prepare('SELECT * FROM qr_codes WHERE token=?').bind(t).first<QR>();
  const direct=!q?await db().prepare('SELECT job_id FROM customer_links WHERE token=?').bind(t).first<{job_id:string}>():null;

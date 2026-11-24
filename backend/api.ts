@@ -40,6 +40,20 @@ export async function handle(r:Request,env:Env){const {db,bucket,requireAdmin,sa
    await db().batch(Array.from({length:count},(_,i)=>db().prepare('INSERT INTO qr_codes(token,label,batch_id,created_at) VALUES(?,?,?,?)').bind(token(),`SN-${String(counter!.value-count+i+1).padStart(3,'0')}`,batch,now)));
    return json({batch_id:batch},201);}
   if(p[1]==='assign'&&method==='POST'){const b=await body(r);await getJob(clean(b.job_id));const q=await db().prepare('UPDATE qr_codes SET job_id=?,assigned_at=? WHERE token=? AND assigned_at IS NULL AND job_id IS NULL RETURNING *').bind(b.job_id,now,clean(b.token)).first();if(!q)throw new HttpError(409,'This code is already assigned or unavailable. Use an unused sticker.');return json(q);}
+  if(p[1]==='photo-layout'&&method==='POST'){
+   const b=await body(r);const job=await getJob(clean(b.job_id));
+   if(!Array.isArray(b.photos)||b.photos.length!==job.photos.length||new Set(b.photos.map((p:any)=>p.id)).size!==job.photos.length)throw new HttpError(409,'Photos changed. Reload before arranging them.');
+   const groups=new Map<string,Set<string>>();
+   for(const p of b.photos){
+    const photo=job.photos.find(q=>q.id===p.id);
+    if(!photo||typeof p.pair_id!=='string'||!/^[-\w]{1,80}$/.test(p.pair_id))throw new HttpError(400,'Invalid photo pairing.');
+    const kinds=groups.get(p.pair_id)||new Set<string>();
+    if(kinds.has(photo.kind)||kinds.size>=2||kinds.has('detail')||(photo.kind==='detail'&&kinds.size))throw new HttpError(400,'Each pair needs one Before and one Now photo.');
+    kinds.add(photo.kind);groups.set(p.pair_id,kinds);
+   }
+   if(b.photos.length)await db().batch(b.photos.map((p:any,i:number)=>db().prepare('UPDATE photos SET position=?,pair_id=? WHERE id=? AND job_id=?').bind(i,p.pair_id,p.id,job.id)));
+   return json(await getJob(job.id));
+  }
   if(p[1]==='reorder'&&method==='POST'){const b=await body(r);const job=await getJob(clean(b.job_id));if(!Array.isArray(b.ids)||b.ids.length!==job.photos.length||new Set(b.ids).size!==b.ids.length||!b.ids.every((id:string)=>job.photos.some(p=>p.id===id)))throw new HttpError(409,'Photos changed. Reload before reordering.');if(b.ids.length)await db().batch(b.ids.map((id:string,i:number)=>db().prepare('UPDATE photos SET position=? WHERE id=? AND job_id=?').bind(i,id,job.id)));return json({saved:true});}
   if(p[1]==='photos'&&method==='POST'){if(+(r.headers.get('content-length')||0)>13*1024*1024)throw new HttpError(413,'Use a photo smaller than 12 MB.');const b=await r.formData();const file=b.get('file');const id=crypto.randomUUID();const job=await getJob(clean(b.get('job_id')));const kind=clean(b.get('kind'));if(!['before','after','detail'].includes(kind))throw new HttpError(400,'Choose a photo type.');
    if(!(file instanceof File)||file.size>12*1024*1024||!['image/jpeg','image/png','image/webp'].includes(file.type))throw new HttpError(400,'Upload a JPEG, PNG, or WebP photo under 12 MB.');const bytes=new Uint8Array(await file.arrayBuffer());
@@ -48,12 +62,12 @@ export async function handle(r:Request,env:Env){const {db,bucket,requireAdmin,sa
    try{await db().prepare('INSERT INTO photos(id,job_id,object_key,label,kind,position,mime) VALUES(?,?,?,?,?,?,?)').bind(id,job.id,key,clean(b.get('label')),kind,job.photos.length,file.type).run();}catch(e){await bucket().delete(key);throw e;}return json(await getJob(job.id));}
   if(p[1]==='photos'&&p[2]){const photo=await db().prepare('SELECT * FROM photos WHERE id=?').bind(p[2]).first<any>();if(!photo)throw new HttpError(404,'Photo unavailable.');
    if(method==='GET'){const obj=await bucket().get(photo.object_key);if(!obj)throw new HttpError(404,'Photo unavailable.');return new Response(obj.body,{headers:{'Content-Type':photo.mime,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
-   if(method==='PATCH'){const b=await body(r);if(!Number.isInteger(b.position)||b.position<0||b.position>1000||!['before','after','detail'].includes(b.kind))throw new HttpError(400,'Check photo order and type.');await db().prepare('UPDATE photos SET label=?,kind=?,position=? WHERE id=?').bind(clean(b.label),b.kind,b.position,p[2]).run();return json({saved:true});}
+   if(method==='PATCH'){const b=await body(r);if(!Number.isInteger(b.position)||b.position<0||b.position>1000||!['before','after','detail'].includes(b.kind))throw new HttpError(400,'Check photo order and type.');await db().prepare('UPDATE photos SET label=?,kind=?,position=?,pair_id=CASE WHEN kind<>? THEN ? ELSE pair_id END WHERE id=?').bind(clean(b.label),b.kind,b.position,b.kind,`solo-${photo.id}`,p[2]).run();return json({saved:true});}
    if(method==='DELETE'){await db().prepare('DELETE FROM photos WHERE id=?').bind(p[2]).run();await bucket().delete(photo.object_key);return json({deleted:true});}
   }
   if(p[1]==='seed'&&method==='POST'){if(!isLocal(r,env))throw new HttpError(404,'Unavailable.');if(await db().prepare("SELECT id FROM jobs WHERE id='sample-kitchen'").first())return json(await getJob('sample-kitchen'));
    await db().prepare('INSERT INTO jobs(id,internal_name,title,source,status,links,demo,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)').bind('sample-kitchen','Sample kitchen · network photos','We loved working with you, Sam!','training','active',JSON.stringify({google:googleReviewURL}),1,now,now).run();
-   for(const kind of ['before','after']){const f=await fetch(new URL(`sample/${kind}.webp`,settings().origin));if(!f.ok)throw new HttpError(503,'Sample images unavailable.');const key=`jobs/sample-kitchen/${kind}`;await bucket().put(key,await f.arrayBuffer(),{httpMetadata:{contentType:'image/webp'}});await db().prepare('INSERT INTO photos VALUES(?,?,?,?,?,?,?)').bind(`sample-${kind}`,'sample-kitchen',key,kind==='before'?'Before refinishing':'Finished cabinets',kind,kind==='before'?0:1,'image/webp').run();}
+   for(const kind of ['before','after']){const f=await fetch(new URL(`sample/${kind}.webp`,settings().origin));if(!f.ok)throw new HttpError(503,'Sample images unavailable.');const key=`jobs/sample-kitchen/${kind}`;await bucket().put(key,await f.arrayBuffer(),{httpMetadata:{contentType:'image/webp'}});await db().prepare('INSERT INTO photos(id,job_id,object_key,label,kind,position,mime) VALUES(?,?,?,?,?,?,?)').bind(`sample-${kind}`,'sample-kitchen',key,kind==='before'?'Before refinishing':'Finished cabinets',kind,kind==='before'?0:1,'image/webp').run();}
    await db().prepare('INSERT INTO qr_codes(token,label,batch_id,job_id,assigned_at,created_at) VALUES(?,?,?,?,?,?)').bind(token(),'DEMO-001','demo','sample-kitchen',now,now).run();return json(await getJob('sample-kitchen'));}
  }
  const jobPreview=p[0]==='admin'&&p[1]==='jobs'&&!!p[2]&&['transcribe','cleanup'].includes(p[3])&&method==='POST';

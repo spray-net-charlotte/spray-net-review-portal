@@ -6,12 +6,14 @@ import {photoFile} from '@/lib/photo-files';
 import {saveFile} from '@/lib/client';
 import {desktopPhotoSavePicker,savePhotoWithPicker,isAppleMobile,canUseApplePhotoMenu} from '@/lib/photo-save';
 import SecurePhoto from './SecurePhoto';
+import {photoGroups} from '@/lib/photo-groups';
 
-type Photo={id:string;kind:string;label:string};
+type Photo={id:string;kind:string;label:string;pair_id?:string|null};
 type Prepared={key:string;files:Record<string,File>;failed:string[]};
 type Mode='choices'|'select'|'skip';
 export const skipPhotoLabel="Don't share my photos, I don't want neighbors to be jealous…";
-export default function PhotoHandoff({photos,selected,onSelect,photoURL,onContinue,onDownload,recoveryOnly=false,retryDownloads=false}:{photos:Photo[];selected:string[];onSelect:(ids:string[])=>void;photoURL:(id:string)=>string;onContinue:()=>void;onDownload:(ids:string[])=>void;recoveryOnly?:boolean;retryDownloads?:boolean}){
+export default function PhotoHandoff({photos:inputPhotos,selected,onSelect,photoURL,onContinue,onDownload,recoveryOnly=false,retryDownloads=false}:{photos:Photo[];selected:string[];onSelect:(ids:string[])=>void;photoURL:(id:string)=>string;onContinue:()=>void;onDownload:(ids:string[])=>void;recoveryOnly?:boolean;retryDownloads?:boolean}){
+ const groups=photoGroups(inputPhotos);const photos=groups.flatMap(group=>group.photos);
  const [mode,setMode]=useState<Mode>(selected.length===0?'skip':'choices');
  const [prepared,setPrepared]=useState<Prepared|null>(null);const [error,setError]=useState('');const [status,setStatus]=useState('');const [retry,setRetry]=useState(0);const [requested,setRequested]=useState<string[]>([]);
  const [saving,setSaving]=useState(false);const [saveProgress,setSaveProgress]=useState('');
@@ -83,7 +85,7 @@ export default function PhotoHandoff({photos,selected,onSelect,photoURL,onContin
   <h2 id="photo-heading">Your project photos</h2>
   <small>For your privacy, we remove hidden metadata from uploaded photos, including location and camera details.</small>
   {isAppleMobile()&&!appleMenuFailed&&!mobileFallback&&<small>On iPhone, choose “Save Images” in the menu to add your pictures to Photos. If needed, scroll down in the menu to find it.</small>}
-  {(mode==='choices'||mode==='select')&&!mobileFallback&&<div className="photo-grid">{photos.map(p=><figure className="photo-card" key={p.id}><SecurePhoto src={photoURL(p.id)} alt={p.label}/><span className="photo-type">{p.kind==='after'?'After':p.kind}</span>{mode==='select'?<label className="photo-caption"><Checkbox checked={selected.includes(p.id)} aria-label={`Select ${p.label}`} onCheckedChange={v=>onSelect(v===true?[...selected,p.id]:selected.filter(id=>id!==p.id))}/>{p.label}</label>:<figcaption className="photo-caption">{p.label}</figcaption>}</figure>)}</div>}
+  {(mode==='choices'||mode==='select')&&!mobileFallback&&<div className="photo-comparisons">{groups.map(group=><div className={`photo-comparison-row${group.photos.length===1?' single-photo':''}`} key={group.id}>{group.photos.map(p=><figure className="photo-card" key={p.id}><SecurePhoto src={photoURL(p.id)} alt={p.label}/><span className="photo-type">{p.kind==='after'?'After':p.kind}</span>{mode==='select'?<label className="photo-caption"><Checkbox checked={selected.includes(p.id)} aria-label={`Select ${p.label}`} onCheckedChange={v=>onSelect(v===true?[...selected,p.id]:selected.filter(id=>id!==p.id))}/>{p.label}</label>:<figcaption className="photo-caption">{p.label}</figcaption>}</figure>)}</div>)}</div>}
   {preparationStatus}
   {mobileFallback&&status&&<div className="notice" role="status">{status}</div>}
   {mode==='choices'&&!mobileFallback&&<div className="stack photo-choices">
